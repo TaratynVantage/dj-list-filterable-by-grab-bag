@@ -23,6 +23,13 @@ services:
     build: .
     entrypoint: ["uv", "run", "python", "manage.py"]
     command: ["runserver", "0.0.0.0:8000"]
+    volumes:
+      # Live source code: edits on the host are used without rebuilding,
+      # and runserver auto-reloads on changes.
+      - ./src:/app/src
+      # Mounted so `uv run` syncs dependency changes without a rebuild.
+      - ./pyproject.toml:/app/pyproject.toml:ro
+      - ./uv.lock:/app/uv.lock:ro
     environment:
       MYSQL_HOST: db
       MYSQL_PORT: "3306"

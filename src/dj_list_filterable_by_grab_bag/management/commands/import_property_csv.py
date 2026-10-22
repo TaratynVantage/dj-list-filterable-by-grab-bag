@@ -5,6 +5,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from dj_list_filterable_by_grab_bag.models import (
+    Item,
     Property,
     PropertySet,
     PropertyValue,
@@ -15,7 +16,8 @@ class Command(BaseCommand):
     help = (
         'Import a CSV where each row is a Property (named by the first column), '
         'each other column heading is a PropertySet, and each non-empty cell is '
-        'a PropertyValue that belongs to that column\'s PropertySet.'
+        'a PropertyValue that belongs to that column\'s PropertySet. Each '
+        'column also gets an Item with the same name as its PropertySet.'
     )
 
     def add_arguments(self, parser):
@@ -51,6 +53,15 @@ class Command(BaseCommand):
                 track('property sets', was_created)
                 property_sets.append(property_set)
 
+                # Price isn't in the CSV; new items start at 0 and existing
+                # items keep their price.
+                _, was_created = Item.objects.get_or_create(
+                    name=set_name,
+                    property_set=property_set,
+                    defaults={'price': 0},
+                )
+                track('items', was_created)
+
             for row in rows[1:]:
                 if not row or not row[0].strip():
                     continue
@@ -71,7 +82,7 @@ class Command(BaseCommand):
                     track('property values', was_created)
                     property_set.property_values.add(property_value)
 
-        for kind in ('properties', 'property sets', 'property values'):
+        for kind in ('properties', 'property sets', 'property values', 'items'):
             self.stdout.write(self.style.SUCCESS(
                 f'{kind}: {created[kind]} created, {reused[kind]} reused'
             ))

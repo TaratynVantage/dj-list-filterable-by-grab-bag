@@ -1,0 +1,17 @@
+{% for item in items %}
+  <div class="border-bottom py-3">
+    <div class="d-flex justify-content-between">
+      <h2 class="h5 mb-1">{{ item.name }}</h2>
+      <span class="text-muted">{{ item.price }}</span>
+    </div>
+    <ul class="list-unstyled small mb-0">
+      {% for property_value in item.property_set.property_values.all %}
+        <li>{{ property_value.property.name }}: {{ property_value.value }}</li>
+      {% empty %}
+        <li class="text-muted">No properties</li>
+      {% endfor %}
+    </ul>
+  </div>
+{% empty %}
+  <p class="text-muted">No items yet.</p>
+{% endfor %}

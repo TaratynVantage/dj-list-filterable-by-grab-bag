@@ -1,0 +1,18 @@
+{% load static %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Items</title>
+  <link rel="stylesheet" href="{% static 'dj_list_filterable_by_grab_bag/vendor/bootstrap.min.css' %}">
+  <script src="{% static 'dj_list_filterable_by_grab_bag/vendor/htmx.min.js' %}" defer></script>
+</head>
+<body>
+  <main class="container py-4">
+    <h1 class="h3 mb-4">Items</h1>
+    <div hx-get="{% url 'item-list' %}" hx-trigger="load">
+      <p class="text-muted">Loading…</p>
+    </div>
+  </main>
+</body>
+</html>

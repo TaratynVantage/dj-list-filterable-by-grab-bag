@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'dj_list_filterable_by_grab_bag',
 ]
 
 MIDDLEWARE = [

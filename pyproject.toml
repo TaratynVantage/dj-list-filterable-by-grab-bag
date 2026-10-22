@@ -1,0 +1,20 @@
+[project]
+name = "dj-list-filterable-by-grab-bag"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Tom Aratyn", email = "tom.aratyn@gotvantage.com" }
+]
+requires-python = ">=3.8.0"
+dependencies = [
+    "django==3.2.25",
+    "pymysql>=1.1.2",
+]
+
+[project.scripts]
+dj-list-filterable-by-grab-bag = "dj_list_filterable_by_grab_bag:main"
+
+[build-system]
+requires = ["uv_build>=0.13.5,<0.14.0"]
+build-backend = "uv_build"

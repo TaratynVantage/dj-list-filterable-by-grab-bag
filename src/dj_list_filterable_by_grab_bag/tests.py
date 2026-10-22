@@ -222,6 +222,7 @@ class HomePageTests(TestCase):
         self.assertContains(response, 'vendor/htmx.min.js')
         self.assertContains(response, 'vendor/bootstrap.min.css')
         self.assertContains(response, f'hx-get="{reverse("item-list")}"')
+        self.assertContains(response, 'name="q"')
 
 
 class ItemListTests(TestCase):
@@ -258,6 +259,63 @@ class ItemListTests(TestCase):
         response = self.client.get(reverse('item-list'))
 
         self.assertContains(response, 'No items yet.')
+
+    def create_item(self, name, *values):
+        color = Property.objects.get_or_create(name='Color')[0]
+        property_set = PropertySet.objects.create(name=name)
+        for value in values:
+            property_set.property_values.add(
+                PropertyValue.objects.get_or_create(property=color, value=value)[0]
+            )
+        return Item.objects.create(
+            name=name, price='1.00', property_set=property_set
+        )
+
+    def get_item_names(self, query=None):
+        params = {} if query is None else {'q': query}
+        response = self.client.get(reverse('item-list'), params)
+        return [item.name for item in response.context['items']]
+
+    def test_empty_filter_shows_all_items(self):
+        self.create_item('Red Shirt', 'Red')
+        self.create_item('Blue Shirt', 'Blue')
+
+        self.assertEqual(self.get_item_names(), ['Blue Shirt', 'Red Shirt'])
+        self.assertEqual(self.get_item_names(''), ['Blue Shirt', 'Red Shirt'])
+        self.assertEqual(self.get_item_names('   '), ['Blue Shirt', 'Red Shirt'])
+
+    def test_filter_matches_property_values_case_insensitively(self):
+        self.create_item('Red Shirt', 'Dark Red')
+        self.create_item('Blue Shirt', 'Blue')
+
+        self.assertEqual(self.get_item_names('red'), ['Red Shirt'])
+        self.assertEqual(self.get_item_names('RK R'), ['Red Shirt'])
+
+    def test_filter_does_not_match_item_or_property_names(self):
+        self.create_item('Red Shirt', 'Blue')
+
+        self.assertEqual(self.get_item_names('Red'), [])
+        self.assertEqual(self.get_item_names('Color'), [])
+
+    def test_filter_returns_item_once_when_several_values_match(self):
+        self.create_item('Shirt', 'Red', 'Dark Red')
+
+        self.assertEqual(self.get_item_names('red'), ['Shirt'])
+
+    def test_filtered_item_still_shows_all_its_values(self):
+        self.create_item('Shirt', 'Red', 'Blue')
+
+        response = self.client.get(reverse('item-list'), {'q': 'red'})
+
+        self.assertContains(response, '<li>Color: Red</li>', html=True)
+        self.assertContains(response, '<li>Color: Blue</li>', html=True)
+
+    def test_filter_with_no_matches(self):
+        self.create_item('Shirt', 'Red')
+
+        response = self.client.get(reverse('item-list'), {'q': 'green'})
+
+        self.assertContains(response, 'No items match “green”.')
 
     def test_query_count_does_not_grow_with_items(self):
         color = Property.objects.create(name='Color')

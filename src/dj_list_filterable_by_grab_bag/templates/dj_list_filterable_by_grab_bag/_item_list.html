@@ -13,5 +13,9 @@
     </ul>
   </div>
 {% empty %}
-  <p class="text-muted">No items yet.</p>
+  {% if query %}
+    <p class="text-muted">No items match “{{ query }}”.</p>
+  {% else %}
+    <p class="text-muted">No items yet.</p>
+  {% endif %}
 {% endfor %}

@@ -10,7 +10,19 @@
 <body>
   <main class="container py-4">
     <h1 class="h3 mb-4">Items</h1>
-    <div hx-get="{% url 'item-list' %}" hx-trigger="load">
+    <input
+      type="search"
+      name="q"
+      class="form-control mb-3"
+      placeholder="Filter by property value"
+      aria-label="Filter by property value"
+      autocomplete="off"
+      hx-get="{% url 'item-list' %}"
+      hx-trigger="load, input changed delay:300ms, search"
+      hx-target="#item-list"
+      hx-sync="this:replace"
+    >
+    <div id="item-list">
       <p class="text-muted">Loading…</p>
     </div>
   </main>

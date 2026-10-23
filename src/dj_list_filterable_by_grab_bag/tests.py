@@ -1,3 +1,4 @@
+import csv
 import os
 import tempfile
 from decimal import Decimal
@@ -319,7 +320,7 @@ class ItemListTests(TestCase):
 
     def test_query_count_does_not_grow_with_items(self):
         color = Property.objects.create(name='Color')
-        for i in range(5):
+        for i in range(25):
             property_set = PropertySet.objects.create(name=f'Set {i}')
             property_set.property_values.add(
                 PropertyValue.objects.create(property=color, value=str(i))
@@ -328,5 +329,75 @@ class ItemListTests(TestCase):
                 name=f'Item {i}', price='1.00', property_set=property_set
             )
 
-        with self.assertNumQueries(2):
+        with self.assertNumQueries(4):
             self.client.get(reverse('item-list'))
+
+
+class GeneratePropertyCsvTests(TestCase):
+    def generate(self, **options):
+        stdout = StringIO()
+        call_command(
+            'generate_property_csv', stdout=stdout, stderr=StringIO(), **options
+        )
+        return stdout.getvalue()
+
+    def generate_rows(self, **options):
+        return list(csv.reader(StringIO(self.generate(**options))))
+
+    def test_shape_matches_requested_properties_and_columns(self):
+        rows = self.generate_rows(properties=7, columns=4, seed=1)
+
+        self.assertEqual(len(rows), 8)
+        self.assertTrue(all(len(row) == 5 for row in rows))
+        self.assertEqual(rows[0][0], 'property')
+        set_names = rows[0][1:]
+        property_names = [row[0] for row in rows[1:]]
+        self.assertEqual(len(set(set_names)), 4)
+        self.assertEqual(len(set(property_names)), 7)
+        self.assertTrue(all(set_names) and all(property_names))
+
+    def test_empty_ratio_zero_fills_every_cell(self):
+        rows = self.generate_rows(
+            properties=5, columns=5, empty_ratio=0, seed=1
+        )
+
+        self.assertTrue(all(cell for row in rows[1:] for cell in row[1:]))
+
+    def test_empty_ratio_one_leaves_every_cell_empty(self):
+        rows = self.generate_rows(
+            properties=5, columns=5, empty_ratio=1, seed=1
+        )
+
+        self.assertFalse(any(cell for row in rows[1:] for cell in row[1:]))
+
+    def test_same_seed_gives_same_output(self):
+        self.assertEqual(
+            self.generate(properties=5, columns=3, seed=42),
+            self.generate(properties=5, columns=3, seed=42),
+        )
+
+    def test_writes_to_output_file_that_imports_cleanly(self):
+        tmp_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp_dir.cleanup)
+        path = os.path.join(tmp_dir.name, 'generated.csv')
+
+        stdout = self.generate(properties=6, columns=3, output=path, seed=1)
+        call_command('import_property_csv', path, stdout=StringIO())
+
+        self.assertEqual(stdout, '')
+        self.assertEqual(Property.objects.count(), 6)
+        self.assertEqual(PropertySet.objects.count(), 3)
+        self.assertEqual(Item.objects.count(), 3)
+
+    def test_invalid_arguments_raise_command_error(self):
+        for options, message in [
+            ({'properties': 0, 'columns': 1}, '--properties'),
+            ({'properties': 1, 'columns': 0}, '--columns'),
+            ({'properties': 1, 'columns': 1, 'empty_ratio': 1.5},
+             '--empty-ratio'),
+            ({'properties': 1, 'columns': 1, 'empty_ratio': -0.1},
+             '--empty-ratio'),
+        ]:
+            with self.subTest(options=options):
+                with self.assertRaisesMessage(CommandError, message):
+                    self.generate(**options)

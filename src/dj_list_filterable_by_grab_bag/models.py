@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 from django.db import models
+from django.db.models import QuerySet, Prefetch
 
 
 class Property(models.Model):
@@ -28,12 +31,34 @@ class PropertySet(models.Model):
         return self.name
 
 
+class ItemManager(models.Manager):
+    def get_items_from_property_value(self, query: str) -> QuerySet:
+        items: QuerySet[Item] = (
+            self.get_queryset()
+            .prefetch_related(Prefetch(
+                'property_set__property_values',
+                queryset=PropertyValue.objects
+                .select_related('property')
+            ))
+            .order_by('name')
+        )
+        if query:
+            # distinct() because an item matches once per matching value.
+            items = (items
+                     .filter(property_set__property_values__value__icontains=query)
+                     .distinct()
+                     )
+        return items
+
+
 class Item(models.Model):
     name = models.CharField(max_length=255)
     price = models.DecimalField(max_digits=10, decimal_places=2)
     property_set = models.ForeignKey(
         PropertySet, on_delete=models.PROTECT, related_name='items'
     )
+
+    objects = ItemManager()
 
     def __str__(self):
         return self.name

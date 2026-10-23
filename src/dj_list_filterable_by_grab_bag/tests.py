@@ -345,15 +345,17 @@ class GeneratePropertyCsvTests(TestCase):
         return list(csv.reader(StringIO(self.generate(**options))))
 
     def test_shape_matches_requested_properties_and_columns(self):
-        rows = self.generate_rows(properties=7, columns=4, seed=1)
+        expected_num_properties = 7
+        expected_num_items = 4
+        rows = self.generate_rows(properties=expected_num_properties, columns=expected_num_items, seed=1)
 
         self.assertEqual(len(rows), 8)
         self.assertTrue(all(len(row) == 5 for row in rows))
         self.assertEqual(rows[0][0], 'property')
         set_names = rows[0][1:]
         property_names = [row[0] for row in rows[1:]]
-        self.assertEqual(len(set(set_names)), 4)
-        self.assertEqual(len(set(property_names)), 7)
+        self.assertEqual(len(set(set_names)), expected_num_items)
+        self.assertEqual(len(set(property_names)), expected_num_properties)
         self.assertTrue(all(set_names) and all(property_names))
 
     def test_empty_ratio_zero_fills_every_cell(self):
@@ -361,6 +363,7 @@ class GeneratePropertyCsvTests(TestCase):
             properties=5, columns=5, empty_ratio=0, seed=1
         )
 
+        # Skips first row and column because those aren't values.
         self.assertTrue(all(cell for row in rows[1:] for cell in row[1:]))
 
     def test_empty_ratio_one_leaves_every_cell_empty(self):
@@ -368,6 +371,7 @@ class GeneratePropertyCsvTests(TestCase):
             properties=5, columns=5, empty_ratio=1, seed=1
         )
 
+        # Skips first row and column because those aren't values.
         self.assertFalse(any(cell for row in rows[1:] for cell in row[1:]))
 
     def test_same_seed_gives_same_output(self):

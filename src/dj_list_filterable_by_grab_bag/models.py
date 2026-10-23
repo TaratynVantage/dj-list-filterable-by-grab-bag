@@ -21,10 +21,27 @@ class PropertyValue(models.Model):
         return f'{self.property}: {self.value}'
 
 
+class PropertyValuePropertySetThroughModel(models.Model):
+    property_value = models.ForeignKey(
+        PropertyValue, on_delete=models.CASCADE, related_name='property_values'
+    )
+    property_set = models.ForeignKey(
+        'PropertySet', on_delete=models.CASCADE, related_name='propertysets'
+    )
+
+    class Meta:
+        unique_together = (
+            ('property_value', 'property_set',),
+        )
+        indexes = [
+            models.Index(fields=['property_set', 'property_value', ]),
+        ]
+
+
 class PropertySet(models.Model):
     name = models.CharField(max_length=255)
     property_values = models.ManyToManyField(
-        PropertyValue, related_name='property_sets', blank=True
+        PropertyValue, related_name='property_sets', blank=True, through=PropertyValuePropertySetThroughModel
     )
 
     def __str__(self):
